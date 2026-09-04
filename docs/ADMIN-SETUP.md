@@ -79,9 +79,14 @@ itself.*
 
 ## 4. Generate an org-read GitHub token for the fleet audit
 
-The daily `fleet-check.yml` workflow (in this repo) needs to search and
-read files across *every* repo in the org, which the default per-repo
-`GITHUB_TOKEN` cannot do.
+The daily `fleet-check.yml` workflow needs to search and read files across
+*every* repo in the org, which the default per-repo `GITHUB_TOKEN` cannot
+do. This workflow lives in a separate **private** repo,
+[`publicdigital/claude-prototype-fleet-check`](https://github.com/publicdigital/claude-prototype-fleet-check)
+— not in this (public) repo — because its tracking issue lists real
+prototype repo names, owners, and switch-off dates, which shouldn't be
+public. Create that repo (private, org: `publicdigital`) before doing the
+steps below if it doesn't already exist.
 
 1. Create a **fine-grained personal access token** (or an organization-owned
    GitHub App token, if you'd rather not tie this to a personal account —
@@ -91,9 +96,12 @@ read files across *every* repo in the org, which the default per-repo
      org (or at minimum, all repos carrying the `claude-prototype` topic).
 2. In GitHub: `publicdigital` org → **Settings → Secrets and variables →
    Actions → New organization secret**.
-3. Name it exactly `ORG_READ_TOKEN`, scope it to this repo
-   (`claude-prototype-deploy`) only — it doesn't need to be visible to
-   prototype repos themselves.
+3. Name it exactly `ORG_READ_TOKEN`, scope it to the
+   `claude-prototype-fleet-check` repo only — it doesn't need to be visible
+   to this repo or to prototype repos themselves.
+4. Also restrict who has collaborator access to `claude-prototype-fleet-check`
+   itself — its issues carry the same client-identifying metadata, so treat
+   repo access there like access to a client list.
 
 ## 5. Confirm who can create repositories in the org
 
