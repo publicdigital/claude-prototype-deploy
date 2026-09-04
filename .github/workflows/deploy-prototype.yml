@@ -12,16 +12,18 @@ name: Deploy prototype to Netlify
 #
 # NETLIFY_SITE_ID is intentionally NOT required to pre-exist. On a
 # prototype's very first deploy there is no Netlify site yet, so this
-# workflow uses `netlify deploy --create-site` on that first run and then
-# relies on Netlify CLI's own `.netlify/state.json` (committed back to the
-# prototype repo) to reuse the same site on every subsequent deploy. This
-# is the simplest approach that needs no extra API calls during scaffolding
-# — but it does mean the very first deploy commits a small state file back
-# to the calling repo. If that turns out to be undesirable in practice,
-# the alternative is to have the `new-prototype` skill call the Netlify
-# API (`createSite`) during scaffolding and pass the resulting site ID in
-# as `NETLIFY_SITE_ID`, skipping --create-site entirely. Flagging this as
-# the part most worth revisiting once this has been used for real.
+# workflow runs `netlify sites:create` on that first run (there is no
+# `netlify deploy --create-site` flag — verified against `netlify-cli@17
+# deploy --help`, which has no such option) and then relies on Netlify
+# CLI's own `.netlify/state.json` (committed back to the prototype repo,
+# which `sites:create` writes automatically by linking the new site to the
+# current directory) to reuse the same site on every subsequent deploy.
+# This is the simplest approach that needs no extra API calls during
+# scaffolding — but it does mean the very first deploy commits a small
+# state file back to the calling repo. If that turns out to be undesirable
+# in practice, the alternative is to have the `new-prototype` skill call
+# the Netlify API (`createSite`) during scaffolding and pass the resulting
+# site ID in as `NETLIFY_SITE_ID`, skipping `sites:create` entirely.
 
 on:
   workflow_call:
@@ -60,14 +62,11 @@ jobs:
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run: |
-          # First deploy for this repo: no site exists yet, so let the
-          # Netlify CLI create one and remember it in .netlify/state.json.
-          # NOTE: --create-site takes a site *name* in some CLI versions and
-          # is interactive/account-scoped in others — verify this flag
-          # against the netlify-cli@17 docs in your dashboard if this step
-          # fails; this is the one part of this workflow that wasn't
-          # verified end-to-end at design time.
-          netlify deploy --prod --dir=. --create-site="${GITHUB_REPOSITORY##*/}"
+          # First deploy for this repo: no site exists yet. `sites:create`
+          # creates it and links it to the current directory (writing
+          # .netlify/state.json), which the deploy below then picks up.
+          netlify sites:create --name "${GITHUB_REPOSITORY##*/}"
+          netlify deploy --prod --dir=.
 
       - name: Commit Netlify site state (first run only)
         if: ${{ env.NETLIFY_SITE_ID == '' }}
