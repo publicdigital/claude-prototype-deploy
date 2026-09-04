@@ -56,7 +56,8 @@ jobs:
         if: steps.site.outputs.linked == 'true'
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        run: netlify api getSite --data "{\"site_id\": \"$(jq -r .siteId .netlify/state.json)\"}"
+        run: |
+          netlify api getSite --data "{\"site_id\": \"$(jq -r .siteId .netlify/state.json)\"}"
 
       - name: Create Netlify site (first deploy only)
         if: steps.site.outputs.linked == 'false'
