@@ -23,13 +23,23 @@ name: Deploy prototype to Netlify
 # on a name collision — on every deploy after the first).
 #
 # New Netlify projects are also private by default now (they gate every
-# visitor behind "sign in with an invited Netlify account", confirmed via
-# `netlify api getSite` — the fields are `sso_login: true` and
-# `sso_login_context: "all"`; see
-# https://www.netlify.com/blog/new-netlify-projects-are-now-private-by-default/).
+# visitor behind "sign in with an invited Netlify account" — Netlify's
+# "Project visibility" feature, rolled out July 2026:
+# https://www.netlify.com/changelog/2026-07-28-start-with-private-project-urls/).
 # That sits in FRONT of this repo's own _headers Basic-Auth and defeats the
-# entire point of a per-prototype password, so the first-deploy step below
-# disables it right after creating the site.
+# entire point of a per-prototype password.
+#
+# This can't be fixed here: Project visibility has no field on the classic
+# Site object (confirmed against a live `netlify api getSite` dump — no
+# matching field) and no matching method in `netlify api --list` or
+# `netlify-cli@17 --help`; it's dashboard-only as of this writing (an
+# `sso_login: false` updateSite call was tried and confirmed to do nothing
+# — that field is Netlify Identity, unrelated). The org-wide fix is a
+# one-time admin step — see docs/ADMIN-SETUP.md — setting the team's
+# default project visibility to Public so every new prototype site is
+# unaffected; if that hasn't been done, whoever builds a given prototype
+# needs to flip that one site's own visibility to Public by hand once, in
+# Project configuration > General > Visitor access > Project visibility.
 
 on:
   workflow_call:
@@ -78,18 +88,6 @@ jobs:
           # would otherwise re-prompt interactively and hang CI the same way
           # the missing --account-slug did above.
           netlify sites:create --name "publicdigital-${GITHUB_REPOSITORY##*/}" --account-slug "$ACCOUNT_SLUG"
-
-      - name: Ensure Netlify project is public
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        run: |
-          # New sites are private by default (see the file header comment
-          # above) — disable that gate so only our own _headers Basic-Auth
-          # controls access. Runs on every deploy, not just the first, so it
-          # also fixes any site that was already created private before this
-          # step existed, and stays correct if the flag is ever toggled back.
-          SITE_ID=$(jq -r .siteId .netlify/state.json)
-          netlify api updateSite --data "{\"site_id\": \"$SITE_ID\", \"sso_login\": false}"
 
       - name: Deploy to Netlify
         env:

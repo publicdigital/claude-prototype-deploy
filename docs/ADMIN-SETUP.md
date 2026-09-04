@@ -148,8 +148,37 @@ Netlify plan at design time.** Before relying on it:
    either upgrade the team's plan or reconsider the auth approach — do
    this before telling prototype-builders the pathway is ready to use.
 
+## 8. Set the team's default project visibility to Public
+
+Netlify rolled out a "Project visibility" feature in July 2026: teams
+created on or after that date have new projects set to **private** by
+default — every visitor, including on the live URL, is redirected to
+`app.netlify.com/edge-access` and asked to sign in with an invited Netlify
+account. That sits in *front* of this repo's own `_headers` Basic-Auth
+entirely, defeating the whole point of a per-prototype password, and isn't
+something `deploy-prototype.yml` can fix on its own — as of this writing,
+Project visibility has no field on the classic Site API object and no
+matching `netlify api` method or CLI command, so it can only be changed in
+the dashboard (confirmed the hard way: see the deploy-prototype.yml history
+around when `publicdigital/skill-test` hit this — an `sso_login: false`
+`updateSite` call was tried first and does nothing, since that field is
+Netlify Identity, a different, unrelated feature).
+
+1. In the Netlify dashboard: your team → **Team settings → General →
+   Visitor access → Default project visibility**.
+2. Set it to **Public**. This applies to every *new* project going
+   forward — it does not retroactively fix ones already created private.
+3. Any prototype repo already deployed before you do this will still need
+   its own project's visibility flipped by hand once: that project's own
+   **Project configuration → General → Visitor access → Project
+   visibility → Public**.
+4. *Verify this against your own dashboard* — Netlify's settings layout
+   and this feature's rollout both change; if the path above doesn't
+   match what you see, or your team predates July 2026 and already
+   defaults to Public, adjust accordingly.
+
 ---
 
-Once all seven steps are done, prototype-builders can use the
+Once all eight steps are done, prototype-builders can use the
 `new-prototype` skill from their own Claude Code sessions without ever
 touching Netlify or these secrets directly.
