@@ -91,8 +91,10 @@ Validate the switch-off date yourself:
      don't guess), `{{CREATED_DATE}}` (today, `YYYY-MM-DD`), and
      `{{SWITCH_OFF_DATE}}` (validated in step 2, `YYYY-MM-DD`).
    - In `README.md`: replace `{{PROJECT}}`.
-   - `index.html` and `.github/workflows/deploy.yml` are copied as-is,
-     no substitution needed.
+   - `index.html`, `netlify.toml`, and `.github/workflows/deploy.yml` are
+     copied as-is, no substitution needed. Don't skip `netlify.toml` — it's
+     what makes Netlify actually register `basic-auth.ts` as an Edge
+     Function rather than silently deploying it as a plain static file.
 5. Write all of these files into the new repo, preserving the directory
    structure (`.github/workflows/deploy.yml` must land at that exact path
    in the new repo).
