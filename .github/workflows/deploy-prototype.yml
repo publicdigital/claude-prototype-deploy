@@ -37,6 +37,11 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # `secrets` is not readable from a step's `if:` condition (only from
+    # `env:`/`run:`), so it's mirrored into job-level env here and the
+    # steps below branch on `env.NETLIFY_SITE_ID` instead.
+    env:
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
     steps:
       - name: Checkout prototype repo
         uses: actions/checkout@v4
@@ -45,14 +50,13 @@ jobs:
         run: npm install -g netlify-cli@17
 
       - name: Deploy to Netlify (existing site)
-        if: ${{ secrets.NETLIFY_SITE_ID != '' }}
+        if: ${{ env.NETLIFY_SITE_ID != '' }}
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: netlify deploy --prod --dir=. --site="$NETLIFY_SITE_ID"
 
       - name: Deploy to Netlify (first run — create site)
-        if: ${{ secrets.NETLIFY_SITE_ID == '' }}
+        if: ${{ env.NETLIFY_SITE_ID == '' }}
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run: |
@@ -66,7 +70,7 @@ jobs:
           netlify deploy --prod --dir=. --create-site="${GITHUB_REPOSITORY##*/}"
 
       - name: Commit Netlify site state (first run only)
-        if: ${{ secrets.NETLIFY_SITE_ID == '' }}
+        if: ${{ env.NETLIFY_SITE_ID == '' }}
         run: |
           if [ -f .netlify/state.json ]; then
             git config user.name "github-actions[bot]"
