@@ -1,0 +1,75 @@
+name: Deploy prototype to Netlify
+
+# Reusable workflow. Prototype repos call this via a thin caller workflow
+# (see prototype-template/.github/workflows/deploy.yml) using
+# `uses: publicdigital/claude-prototype-deploy/.github/workflows/deploy-prototype.yml@main`
+# and `secrets: inherit`. That works because NETLIFY_AUTH_TOKEN is an
+# org-level GitHub Actions secret already scoped to prototype repos (see
+# docs/ADMIN-SETUP.md) — the caller never sees or handles the token itself,
+# it just passes org secrets through.
+#
+# NETLIFY_SITE_ID is intentionally NOT required to pre-exist. On a
+# prototype's very first deploy there is no Netlify site yet, so this
+# workflow uses `netlify deploy --create-site` on that first run and then
+# relies on Netlify CLI's own `.netlify/state.json` (committed back to the
+# prototype repo) to reuse the same site on every subsequent deploy. This
+# is the simplest approach that needs no extra API calls during scaffolding
+# — but it does mean the very first deploy commits a small state file back
+# to the calling repo. If that turns out to be undesirable in practice,
+# the alternative is to have the `new-prototype` skill call the Netlify
+# API (`createSite`) during scaffolding and pass the resulting site ID in
+# as `NETLIFY_SITE_ID`, skipping --create-site entirely. Flagging this as
+# the part most worth revisiting once this has been used for real.
+
+on:
+  workflow_call:
+    secrets:
+      NETLIFY_AUTH_TOKEN:
+        required: true
+      NETLIFY_SITE_ID:
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout prototype repo
+        uses: actions/checkout@v4
+
+      - name: Install Netlify CLI
+        run: npm install -g netlify-cli@17
+
+      - name: Deploy to Netlify (existing site)
+        if: ${{ secrets.NETLIFY_SITE_ID != '' }}
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: netlify deploy --prod --dir=. --site="$NETLIFY_SITE_ID"
+
+      - name: Deploy to Netlify (first run — create site)
+        if: ${{ secrets.NETLIFY_SITE_ID == '' }}
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: |
+          # First deploy for this repo: no site exists yet, so let the
+          # Netlify CLI create one and remember it in .netlify/state.json.
+          # NOTE: --create-site takes a site *name* in some CLI versions and
+          # is interactive/account-scoped in others — verify this flag
+          # against the netlify-cli@17 docs in your dashboard if this step
+          # fails; this is the one part of this workflow that wasn't
+          # verified end-to-end at design time.
+          netlify deploy --prod --dir=. --create-site="${GITHUB_REPOSITORY##*/}"
+
+      - name: Commit Netlify site state (first run only)
+        if: ${{ secrets.NETLIFY_SITE_ID == '' }}
+        run: |
+          if [ -f .netlify/state.json ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add -f .netlify/state.json
+            git commit -m "chore: record Netlify site id from first deploy [skip ci]" || echo "Nothing to commit"
+            git push
+          fi
