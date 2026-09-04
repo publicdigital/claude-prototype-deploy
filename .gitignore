@@ -1,2 +1,26 @@
+# Python
 __pycache__/
 *.pyc
+
+# Local secrets / credentials — never commit real values
+.env
+.env.*
+*.pem
+*.key
+secrets.json
+credentials.json
+
+# Netlify CLI local state
+.netlify/
+
+# Node (if netlify-cli or similar is ever run locally)
+node_modules/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
