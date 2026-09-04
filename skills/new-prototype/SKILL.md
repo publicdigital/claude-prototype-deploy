@@ -33,7 +33,7 @@ can create a repository in the `publicdigital` GitHub org.
   checking the authenticated user's org role/permissions, or attempting a
   dry-run check if your GitHub tooling supports one).
 - If you cannot create org repos (org repo-creation is restricted — see
-  `docs/ADMIN-SETUP.md` step 4 in `claude-prototype-deploy`), **stop here**
+  `docs/ADMIN-SETUP.md` step 5 in `claude-prototype-deploy`), **stop here**
   and tell the user exactly this:
   > "I can't create a new repository in the `publicdigital` org — repo
   > creation looks like it's restricted to admins. Ask your admin to
