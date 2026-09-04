@@ -3,10 +3,12 @@ name: Deploy prototype to Netlify
 # Reusable workflow. Prototype repos call this via a thin caller workflow
 # (see prototype-template/.github/workflows/deploy.yml) using
 # `uses: publicdigital/claude-prototype-deploy/.github/workflows/deploy-prototype.yml@main`
-# and `secrets: inherit`. That works because NETLIFY_AUTH_TOKEN is an
-# org-level GitHub Actions secret already scoped to prototype repos (see
-# docs/ADMIN-SETUP.md) — the caller never sees or handles the token itself,
-# it just passes org secrets through.
+# and `secrets: inherit`. That works because NETLIFY_AUTH_TOKEN exists as a
+# plain repository secret on each prototype repo — pushed there at repo
+# creation time by the provision-prototype-secret.yml bridge workflow in
+# this repo (org-level Actions secrets don't reach private repos on a
+# GitHub Free org, see docs/ADMIN-SETUP.md) — the caller never sees or
+# handles the token itself, it just passes secrets through.
 #
 # NETLIFY_SITE_ID is intentionally NOT required to pre-exist. On a
 # prototype's very first deploy there is no Netlify site yet, so this

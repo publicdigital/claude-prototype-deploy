@@ -93,6 +93,17 @@ Validate the switch-off date yourself:
 5. Write all of these files into the new repo, preserving the directory
    structure (`.github/workflows/deploy.yml` must land at that exact path
    in the new repo).
+6. Trigger the secrets bridge so the deploy workflow has something to
+   deploy with: dispatch the `provision-prototype-secret.yml` workflow in
+   `publicdigital/claude-prototype-deploy` via the GitHub API
+   (`workflow_dispatch`, input `repo` = this repo's bare name, no
+   `publicdigital/` prefix). Then poll that workflow run until it finishes.
+   This copies `NETLIFY_AUTH_TOKEN` into the new repo as a repository
+   secret — do this *before* Step 5's push, since the push triggers the
+   deploy workflow and it will fail without the secret in place. If the
+   dispatch call fails with a permission error, this user likely lacks
+   write access to `claude-prototype-deploy` — see
+   `docs/ADMIN-SETUP.md` step 3 and tell the user to ask their admin.
 
 ## Step 4 — Set topic and description
 
@@ -135,8 +146,10 @@ the user:
 If the deploy workflow fails, read the failure from the Actions log and
 help the user fix it rather than just reporting failure — common causes
 early on are `NETLIFY_AUTH_TOKEN` not yet being available to this repo
-(an admin setup issue, see `docs/ADMIN-SETUP.md`) or the `--create-site`
-step needing attention (see the comments in `deploy-prototype.yml`).
+(check whether Step 3's secrets-bridge dispatch actually succeeded before
+the push — an admin setup issue if it didn't, see `docs/ADMIN-SETUP.md`)
+or the `--create-site` step needing attention (see the comments in
+`deploy-prototype.yml`).
 
 ## Step 8 — Ongoing: guard against requests that won't work on this hosting
 
