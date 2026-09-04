@@ -22,7 +22,7 @@ new GitHub repo in `publicdigital`, seeded from prototype-template/
         │  deploys the static site (+ optional Netlify Functions) to Netlify
         ▼
 live HTTPS URL, protected by a per-prototype username+password
-(Netlify `_headers` Basic-Auth — see prototype-template/_headers)
+(Basic-Auth Edge Function — see prototype-template/netlify/edge-functions/basic-auth.ts)
 ```
 
 A separate, org-wide safety net runs on a schedule from a **private sibling

@@ -134,19 +134,26 @@ each person (or your org-wide Claude Code admin config) run:
 source in your Claude Code admin settings* — this is evolving and not
 something to take on faith from this doc.
 
-## 7. Verify: does Basic-Auth via `_headers` need a paid Netlify plan?
+## 7. Basic-Auth is enforced by an Edge Function, not `_headers`
 
-This whole design depends on Netlify's `_headers` file `Basic-Auth`
-directive (per-site username+password, fully scriptable, no dashboard
-clicking required per prototype). **This was not confirmed against a live
-Netlify plan at design time.** Before relying on it:
+The original design used Netlify's `_headers` file `Basic-Auth` directive
+(per-site username+password, fully scriptable, no dashboard clicking
+required per prototype). **Confirmed against a live prototype
+(`publicdigital/skill-test`) that this silently does nothing on Free-plan
+Netlify accounts created in 2026 or later** — the site deployed and was
+reachable, but no auth prompt ever appeared, with no error anywhere to
+indicate why.
+
+The pathway now uses a Netlify Edge Function instead
+(`prototype-template/netlify/edge-functions/basic-auth.ts`, substituted
+with credentials by the `new-prototype` skill the same way `_headers` used
+to be) — Edge Functions run on every Netlify plan, Free included. Nothing
+for you to configure here; this step is just a record of why the design
+changed. If you want to double-check it's actually working:
 
 1. Deploy one test prototype through the full pathway.
-2. Confirm the `Basic-Auth` header in `_headers` actually prompts for a
-   username/password on the live URL.
-3. If it doesn't (or Netlify's docs say it requires Pro), you'll need to
-   either upgrade the team's plan or reconsider the auth approach — do
-   this before telling prototype-builders the pathway is ready to use.
+2. Confirm visiting the live URL actually prompts for a username/password,
+   and that the wrong password is rejected.
 
 ## 8. Set the team's default project visibility to Public
 
@@ -154,7 +161,7 @@ Netlify rolled out a "Project visibility" feature in July 2026: teams
 created on or after that date have new projects set to **private** by
 default — every visitor, including on the live URL, is redirected to
 `app.netlify.com/edge-access` and asked to sign in with an invited Netlify
-account. That sits in *front* of this repo's own `_headers` Basic-Auth
+account. That sits in *front* of this repo's own Basic-Auth Edge Function
 entirely, defeating the whole point of a per-prototype password, and isn't
 something `deploy-prototype.yml` can fix on its own — as of this writing,
 Project visibility has no field on the classic Site API object and no

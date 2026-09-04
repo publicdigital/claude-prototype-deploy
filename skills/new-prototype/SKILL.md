@@ -81,8 +81,11 @@ Validate the switch-off date yourself:
    URL-safe token of at least 16 characters) for this prototype's Basic
    Auth. Generate these yourself — don't ask the user to supply them.
 4. Substitute into the fetched files:
-   - In `_headers`: replace `{{USERNAME}}` and `{{PASSWORD}}` with the
-     generated credentials.
+   - In `netlify/edge-functions/basic-auth.ts`: replace `{{USERNAME}}` and
+     `{{PASSWORD}}` with the generated credentials. (This Edge Function is
+     the auth mechanism — not a `_headers` `Basic-Auth` directive, which
+     silently no-ops on Free-plan Netlify accounts created in 2026 or
+     later; see the comment at the top of that file.)
    - In `PROTOTYPE.yml`: replace `{{CLIENT}}`, `{{PROJECT}}`,
      `{{OWNER_GITHUB}}` (the creating user's GitHub login — look this up,
      don't guess), `{{CREATED_DATE}}` (today, `YYYY-MM-DD`), and
