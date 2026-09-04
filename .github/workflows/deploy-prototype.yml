@@ -21,6 +21,15 @@ name: Deploy prototype to Netlify
 # checked directly rather than via a NETLIFY_SITE_ID secret (nothing ever
 # populates one, so branching on it would retry `sites:create` — and fail
 # on a name collision — on every deploy after the first).
+#
+# New Netlify projects are also private by default now (they gate every
+# visitor behind "sign in with an invited Netlify account", confirmed via
+# `netlify api getSite` — the fields are `sso_login: true` and
+# `sso_login_context: "all"`; see
+# https://www.netlify.com/blog/new-netlify-projects-are-now-private-by-default/).
+# That sits in FRONT of this repo's own _headers Basic-Auth and defeats the
+# entire point of a per-prototype password, so the first-deploy step below
+# disables it right after creating the site.
 
 on:
   workflow_call:
@@ -50,15 +59,6 @@ jobs:
             echo "linked=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # TEMPORARY — remove once we've confirmed the exact site-visibility
-      # API field name in the logs; see the "make public" step below.
-      - name: DEBUG dump site JSON
-        if: steps.site.outputs.linked == 'true'
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        run: |
-          netlify api getSite --data "{\"site_id\": \"$(jq -r .siteId .netlify/state.json)\"}"
-
       - name: Create Netlify site (first deploy only)
         if: steps.site.outputs.linked == 'false'
         env:
@@ -78,6 +78,18 @@ jobs:
           # would otherwise re-prompt interactively and hang CI the same way
           # the missing --account-slug did above.
           netlify sites:create --name "publicdigital-${GITHUB_REPOSITORY##*/}" --account-slug "$ACCOUNT_SLUG"
+
+      - name: Ensure Netlify project is public
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: |
+          # New sites are private by default (see the file header comment
+          # above) — disable that gate so only our own _headers Basic-Auth
+          # controls access. Runs on every deploy, not just the first, so it
+          # also fixes any site that was already created private before this
+          # step existed, and stays correct if the flag is ever toggled back.
+          SITE_ID=$(jq -r .siteId .netlify/state.json)
+          netlify api updateSite --data "{\"site_id\": \"$SITE_ID\", \"sso_login\": false}"
 
       - name: Deploy to Netlify
         env:
