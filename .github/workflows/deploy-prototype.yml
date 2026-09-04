@@ -10,28 +10,23 @@ name: Deploy prototype to Netlify
 # GitHub Free org, see docs/ADMIN-SETUP.md) — the caller never sees or
 # handles the token itself, it just passes secrets through.
 #
-# NETLIFY_SITE_ID is intentionally NOT required to pre-exist. On a
-# prototype's very first deploy there is no Netlify site yet, so this
+# On a prototype's very first deploy there is no Netlify site yet, so this
 # workflow runs `netlify sites:create` on that first run (there is no
 # `netlify deploy --create-site` flag — verified against `netlify-cli@17
 # deploy --help`, which has no such option) and then relies on Netlify
 # CLI's own `.netlify/state.json` (committed back to the prototype repo,
 # which `sites:create` writes automatically by linking the new site to the
-# current directory) to reuse the same site on every subsequent deploy.
-# This is the simplest approach that needs no extra API calls during
-# scaffolding — but it does mean the very first deploy commits a small
-# state file back to the calling repo. If that turns out to be undesirable
-# in practice, the alternative is to have the `new-prototype` skill call
-# the Netlify API (`createSite`) during scaffolding and pass the resulting
-# site ID in as `NETLIFY_SITE_ID`, skipping `sites:create` entirely.
+# current directory) to reuse the same site on every subsequent deploy —
+# whether that state file is present is what the steps below branch on,
+# checked directly rather than via a NETLIFY_SITE_ID secret (nothing ever
+# populates one, so branching on it would retry `sites:create` — and fail
+# on a name collision — on every deploy after the first).
 
 on:
   workflow_call:
     secrets:
       NETLIFY_AUTH_TOKEN:
         required: true
-      NETLIFY_SITE_ID:
-        required: false
 
 permissions:
   contents: write
@@ -39,11 +34,6 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # `secrets` is not readable from a step's `if:` condition (only from
-    # `env:`/`run:`), so it's mirrored into job-level env here and the
-    # steps below branch on `env.NETLIFY_SITE_ID` instead.
-    env:
-      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
     steps:
       - name: Checkout prototype repo
         uses: actions/checkout@v4
@@ -51,21 +41,28 @@ jobs:
       - name: Install Netlify CLI
         run: npm install -g netlify-cli@17
 
-      - name: Deploy to Netlify (existing site)
-        if: ${{ env.NETLIFY_SITE_ID != '' }}
+      - name: Check whether a Netlify site is already linked
+        id: site
+        run: |
+          if [ -f .netlify/state.json ]; then
+            echo "linked=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "linked=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # TEMPORARY — remove once we've confirmed the exact site-visibility
+      # API field name in the logs; see the "make public" step below.
+      - name: DEBUG dump site JSON
+        if: steps.site.outputs.linked == 'true'
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        run: netlify deploy --prod --dir=. --site="$NETLIFY_SITE_ID"
+        run: netlify api getSite --data "{\"site_id\": \"$(jq -r .siteId .netlify/state.json)\"}"
 
-      - name: Deploy to Netlify (first run — create site)
-        if: ${{ env.NETLIFY_SITE_ID == '' }}
+      - name: Create Netlify site (first deploy only)
+        if: steps.site.outputs.linked == 'false'
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run: |
-          # First deploy for this repo: no site exists yet. `sites:create`
-          # creates it and links it to the current directory (writing
-          # .netlify/state.json), which the deploy below then picks up.
-          #
           # `sites:create` needs an explicit --account-slug: without it, it
           # prompts interactively to choose a team whenever the token's
           # account belongs to more than a personal account (ours does —
@@ -80,10 +77,14 @@ jobs:
           # would otherwise re-prompt interactively and hang CI the same way
           # the missing --account-slug did above.
           netlify sites:create --name "publicdigital-${GITHUB_REPOSITORY##*/}" --account-slug "$ACCOUNT_SLUG"
-          netlify deploy --prod --dir=.
 
-      - name: Commit Netlify site state (first run only)
-        if: ${{ env.NETLIFY_SITE_ID == '' }}
+      - name: Deploy to Netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: netlify deploy --prod --dir=.
+
+      - name: Commit Netlify site state (first deploy only)
+        if: steps.site.outputs.linked == 'false'
         run: |
           if [ -f .netlify/state.json ]; then
             git config user.name "github-actions[bot]"
