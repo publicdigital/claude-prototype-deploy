@@ -13,6 +13,12 @@
 // if you ever see the literal tokens below in a deployed repo, generation
 // was skipped and this prototype has NO effective password (verify before
 // sharing the URL).
+//
+// Registered via the `[[edge_functions]]` block in netlify.toml, not the
+// inline `export const config` convention — a bare `netlify deploy` (no
+// connected Netlify Build) was confirmed to silently upload this file as a
+// plain static asset instead of bundling it as an Edge Function when it
+// relied on inline config alone with no netlify.toml present at all.
 
 export default async (request: Request, context: Netlify.Context) => {
   const expected = "Basic " + btoa("{{USERNAME}}:{{PASSWORD}}");
@@ -26,5 +32,3 @@ export default async (request: Request, context: Netlify.Context) => {
     headers: { "WWW-Authenticate": 'Basic realm="Prototype"' },
   });
 };
-
-export const config = { path: "/*" };
