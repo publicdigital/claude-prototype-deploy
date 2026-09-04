@@ -59,7 +59,15 @@ this, it's scoped to the repo the workflow runs in.
      in the org (or at minimum, all repos carrying the `claude-prototype`
      topic — but note fine-grained PATs scope by explicit repo selection or
      "all repos," not by topic, same caveat as the old approach to step 2
-     above).
+     above). **Scope this to "All repositories," not an explicit list** —
+     a new prototype repo obviously can't be on an explicit list yet when
+     it's created, and the bridge dispatches against it immediately. Get
+     this wrong and the symptom is specific: the bridge workflow run fails
+     with `failed to fetch public key: HTTP 404: Not Found
+     (.../repos/publicdigital/<repo>/actions/secrets/public-key)` — that
+     404 (not 403) is exactly what a fine-grained PAT returns for a repo
+     outside its scope, and is easy to misread as some other kind of
+     permissions problem.
 2. In GitHub: `publicdigital` org → **Settings → Secrets and variables →
    Actions → New organization secret**.
 3. Name it exactly `ORG_SECRETS_BRIDGE_TOKEN`, scope it to
@@ -147,13 +155,20 @@ indicate why.
 The pathway now uses a Netlify Edge Function instead
 (`prototype-template/netlify/edge-functions/basic-auth.ts`, substituted
 with credentials by the `new-prototype` skill the same way `_headers` used
-to be) — Edge Functions run on every Netlify plan, Free included. Nothing
-for you to configure here; this step is just a record of why the design
-changed. If you want to double-check it's actually working:
+to be) — Edge Functions run on every Netlify plan, Free included. It's
+registered via a `[[edge_functions]]` block in `prototype-template/netlify.toml`
+rather than the function file's own inline config, because a bare
+`netlify deploy` (no connected Netlify Build) was confirmed to silently
+deploy the function as an inert static file without it — no error, just
+no auth. Nothing for you to configure here; this step is just a record of
+why the design changed. If you want to double-check it's actually working:
 
 1. Deploy one test prototype through the full pathway.
 2. Confirm visiting the live URL actually prompts for a username/password,
    and that the wrong password is rejected.
+3. If it doesn't, check that prototype's deploy log for a "Bundling edge
+   functions" line — its absence means `netlify.toml` didn't make it into
+   that repo (or isn't at the repo root), not a credentials problem.
 
 ## 8. Set the team's default project visibility to Public
 

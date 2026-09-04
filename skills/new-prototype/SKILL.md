@@ -119,6 +119,16 @@ On the new repo:
 - Set the repo description to something like: `<client> — <project> —
   switch off <switch_off_date>`.
 
+There's no dedicated tool for either of these in every GitHub toolset —
+if yours doesn't have one (e.g. no `gh` CLI and no generic REST-call
+tool), use whatever raw GitHub API access you do have to call
+`PATCH /repos/{owner}/{repo}` (for `description`) and
+`PUT /repos/{owner}/{repo}/topics` (for topics, body
+`{"names": ["claude-prototype"]}`). If you genuinely have no way to make
+either call, don't block on it — tell the user plainly, in your Step 7
+report, that these two need setting by hand (link the repo's Settings
+page) so the fleet-check audit can still find the prototype.
+
 ## Step 5 — Commit and push to main
 
 Commit all the seeded files and push to `main`. If you created the repo
@@ -149,12 +159,32 @@ the user:
   then, tracked by a daily audit, not a technical kill switch).
 
 If the deploy workflow fails, read the failure from the Actions log and
-help the user fix it rather than just reporting failure — common causes
-early on are `NETLIFY_AUTH_TOKEN` not yet being available to this repo
-(check whether Step 3's secrets-bridge dispatch actually succeeded before
-the push — an admin setup issue if it didn't, see `docs/ADMIN-SETUP.md`)
-or the `--create-site` step needing attention (see the comments in
-`deploy-prototype.yml`).
+help the user fix it rather than just reporting failure. Common causes,
+roughly in the order you're likely to hit them:
+
+- `NETLIFY_AUTH_TOKEN` not yet available to this repo — check whether
+  Step 3's secrets-bridge dispatch actually succeeded before the push.
+  If the dispatch itself failed with a 404 fetching the repo's secrets
+  public key, that's `ORG_SECRETS_BRIDGE_TOKEN` not covering this repo —
+  an admin setup issue, see `docs/ADMIN-SETUP.md` step 3.
+- The reusable workflow call fails to parse at all (zero jobs run, no
+  logs) — a YAML/syntax problem in `deploy-prototype.yml` itself on
+  `main`, not something to work around in the prototype repo; report it
+  against `claude-prototype-deploy`.
+- Netlify CLI errors during site creation — see the comments throughout
+  the "Create Netlify site" step in `deploy-prototype.yml` for the
+  specific failure modes already worked through (needing
+  `--account-slug`, site name collisions, etc.).
+- The site deploys and is reachable but shows Netlify's own "This site is
+  private" sign-in gate instead of this repo's Basic-Auth prompt — that's
+  Netlify's "Project visibility" feature, not this pathway; see
+  `docs/ADMIN-SETUP.md` step 8.
+- The site deploys and is reachable but has *no* auth prompt at all
+  (open access) — check the deploy log for a "Bundling edge functions"
+  line and a `Configuration path: .../netlify.toml` line. If either is
+  missing, `netlify.toml` didn't make it into the repo (Step 3 above) or
+  wasn't committed at the repo root — the Edge Function silently deploys
+  as an inert static file without it.
 
 ## Step 8 — Ongoing: guard against requests that won't work on this hosting
 
