@@ -122,17 +122,59 @@ depends on an org setting:
 
 This repo is itself a Claude Code plugin marketplace (see
 `.claude-plugin/marketplace.json`), shipping the skill at
-`skills/new-prototype/SKILL.md`. To enable it for your org's members, have
-each person (or your org-wide Claude Code admin config) run:
+`skills/new-prototype/SKILL.md`.
+
+**Local CLI (terminal), one person at a time:** run
 
 ```
 /plugin marketplace add publicdigital/claude-prototype-deploy
 /plugin install new-prototype@claude-prototype-deploy
 ```
 
-*Confirm the current steps for installing/enabling an org-wide plugin
-source in your Claude Code admin settings* — this is evolving and not
-something to take on faith from this doc.
+`/plugin` is a terminal-only interactive command — it does **not** work in
+Claude Code on the web or the desktop app.
+
+**Web and desktop, or org-wide:** declare the plugin in settings instead.
+`enabledPlugins` is an object keyed by `"plugin-name@marketplace-name"`
+(not an array — that's the one part of this that isn't obvious from the
+settings docs and is easy to get wrong):
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "claude-prototype-deploy": {
+      "source": { "source": "github", "repo": "publicdigital/claude-prototype-deploy" }
+    }
+  },
+  "enabledPlugins": {
+    "new-prototype@claude-prototype-deploy": true
+  }
+}
+```
+
+- For **one person**, on any surface (CLI, web, desktop): put this in their
+  user or project `.claude/settings.json`.
+- For **the whole org**, across all surfaces: put the same shape (add
+  `"autoUpdate": true` inside the marketplace entry if you want it to
+  always track `main`) into Claude Code **managed settings** — either via
+  the admin console at `claude.ai/admin-settings` → Claude Code (Teams/
+  Enterprise plans), or the managed-settings.json file location for your
+  OS. Managed settings take precedence over every user/project settings
+  file and apply on next session start, no action needed from members.
+
+**Once enabled, there is no `/new-prototype` slash command to run.** This
+plugin ships a *skill*, not a command — skills are triggered automatically
+when a user's request matches the trigger phrases in `SKILL.md`'s
+`description` (e.g. "start a new prototype", "deploy this"). Tell
+prototype-builders to just describe what they want in plain language, not
+to type a slash command. To confirm the skill actually loaded: `/plugin` →
+**Installed** tab → `new-prototype` → check its skills are listed (or run
+`/reload-plugins` and check the skill count in its output).
+
+*Verify this against your Claude Code admin settings before relying on
+it* — plugin management is an evolving area, so don't take the exact UI
+path on faith from this doc even though the settings shape above has been
+confirmed working.
 
 ## 7. Verify: does Basic-Auth via `_headers` need a paid Netlify plan?
 
