@@ -1,0 +1,15 @@
+# Netlify Basic-Auth header. See:
+# https://docs.netlify.com/manage/domains-https/basic-auth/
+#
+# {{USERNAME}} and {{PASSWORD}} are replaced by the `new-prototype` skill
+# with a freshly generated, unique-per-prototype random username and
+# password at scaffolding time. Do not commit real placeholder text here —
+# if you ever see the literal tokens below in a deployed repo, generation
+# was skipped and this prototype has NO effective password (verify before
+# sharing the URL).
+#
+# NOTE: verify in the Netlify dashboard whether Basic-Auth via _headers
+# requires a paid (Pro) plan on this account — unconfirmed at design time,
+# see docs/ADMIN-SETUP.md.
+/*
+  Basic-Auth: {{USERNAME}}:{{PASSWORD}}
