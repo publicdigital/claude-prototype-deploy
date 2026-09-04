@@ -1,0 +1,8 @@
+{
+  "name": "new-prototype",
+  "description": "Scaffold and deploy publicdigital prototypes to a live, password-protected URL.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Public Digital"
+  }
+}
