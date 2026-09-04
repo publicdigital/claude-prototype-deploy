@@ -63,9 +63,9 @@ this, it's scoped to the repo the workflow runs in.
 2. In GitHub: `publicdigital` org → **Settings → Secrets and variables →
    Actions → New organization secret**.
 3. Name it exactly `ORG_SECRETS_BRIDGE_TOKEN`, scope it to
-   **Selected repositories** → just `claude-prototype-deploy` (same
-   reasoning as `ORG_READ_TOKEN` in step 4 below — it never needs to be
-   visible to prototype repos themselves).
+   **Selected repositories** → just `claude-prototype-deploy` — it never
+   needs to be visible to prototype repos, or to `claude-prototype-fleet-check`
+   (see step 4 below, which uses a separate token scoped to that repo instead).
 
 Anyone using the `new-prototype` skill also needs permission to trigger
 `workflow_dispatch` on `claude-prototype-deploy` itself (GitHub requires at
@@ -85,8 +85,7 @@ do. This workflow lives in a separate **private** repo,
 [`publicdigital/claude-prototype-fleet-check`](https://github.com/publicdigital/claude-prototype-fleet-check)
 — not in this (public) repo — because its tracking issue lists real
 prototype repo names, owners, and switch-off dates, which shouldn't be
-public. Create that repo (private, org: `publicdigital`) before doing the
-steps below if it doesn't already exist.
+public.
 
 1. Create a **fine-grained personal access token** (or an organization-owned
    GitHub App token, if you'd rather not tie this to a personal account —
