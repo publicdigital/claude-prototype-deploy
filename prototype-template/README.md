@@ -2,12 +2,14 @@
 
 This is a prototype created via the `publicdigital` prototype pathway —
 scaffolded and deployed by the `new-prototype` Claude Code skill, hosted on
-Netlify, and protected by HTTP Basic Auth (see `_headers`).
+Netlify, and protected by HTTP Basic Auth (see
+`netlify/edge-functions/basic-auth.ts`).
 
 - **Live URL, username, and password**: shared with you once by Claude
   when this repo was created. They are not stored anywhere else — if
-  you've lost them, you'll need to rotate them (regenerate `_headers` and
-  push) rather than retrieve them.
+  you've lost them, you'll need to rotate them (regenerate
+  `netlify/edge-functions/basic-auth.ts` and push) rather than retrieve
+  them.
 - **To update the live site**: edit the files in this repo and push to
   `main`. Every push to `main` triggers a fresh deploy automatically.
 - **Metadata**: see `PROTOTYPE.yml` for the switch-off date and ownership

@@ -26,8 +26,9 @@ name: Deploy prototype to Netlify
 # visitor behind "sign in with an invited Netlify account" — Netlify's
 # "Project visibility" feature, rolled out July 2026:
 # https://www.netlify.com/changelog/2026-07-28-start-with-private-project-urls/).
-# That sits in FRONT of this repo's own _headers Basic-Auth and defeats the
-# entire point of a per-prototype password.
+# That sits in FRONT of this repo's own Basic-Auth Edge Function
+# (prototype-template/netlify/edge-functions/basic-auth.ts) and defeats
+# the entire point of a per-prototype password.
 #
 # This can't be fixed here: Project visibility has no field on the classic
 # Site object (confirmed against a live `netlify api getSite` dump — no
