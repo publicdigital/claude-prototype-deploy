@@ -27,6 +27,14 @@ it won't work — don't attempt it and let it fail silently later.
   in-memory state between invocations, execution capped at Netlify's
   function timeout (short — seconds, not minutes; verify the current
   limit for your plan in the Netlify dashboard).
+- **Netlify Edge Functions** (`netlify/edge-functions/*.ts`, registered via
+  a `[[edge_functions]]` block in `netlify.toml`) for logic that needs to
+  run in front of every request — this pathway's own Basic-Auth gate is
+  one (see `prototype-template/netlify/edge-functions/basic-auth.ts`).
+  Same request/response, no-persistent-state model as Functions, but they
+  run on Netlify's edge network rather than a regional one and can
+  short-circuit or modify a request before it reaches static assets or a
+  Function. Free-tier compatible.
 - Reading/writing to an **external managed service** from a Function or
   from the browser — e.g. Supabase, Firebase, Airtable, a hosted Postgres
   provider. The prototype itself stores nothing; the external service does.
