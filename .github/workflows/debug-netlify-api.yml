@@ -1,0 +1,17 @@
+name: DEBUG Netlify API inspect (temporary)
+
+on:
+  workflow_dispatch:
+    inputs:
+      site_id:
+        required: true
+        type: string
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+    steps:
+      - run: npm install -g netlify-cli@17
+      - run: netlify api getSite --data "{\"site_id\": \"${{ inputs.site_id }}\"}"
