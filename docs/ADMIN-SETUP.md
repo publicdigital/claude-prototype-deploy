@@ -70,12 +70,19 @@ depends on an org setting:
 
 ## 5. Enable the `new-prototype` skill for your org's Claude Code users
 
-This repo ships the skill at `skill/new-prototype/SKILL.md`. Exactly how
-your org distributes it to members' Claude Code sessions depends on your
-current Claude Code admin setup (e.g. an org-managed plugin/skill source).
-*Confirm the current steps for installing/enabling an org skill in your
-Claude Code admin settings* — this is evolving and not something to take
-on faith from this doc.
+This repo is itself a Claude Code plugin marketplace (see
+`.claude-plugin/marketplace.json`), shipping the skill at
+`skills/new-prototype/SKILL.md`. To enable it for your org's members, have
+each person (or your org-wide Claude Code admin config) run:
+
+```
+/plugin marketplace add publicdigital/claude-prototype-deploy
+/plugin install new-prototype@claude-prototype-deploy
+```
+
+*Confirm the current steps for installing/enabling an org-wide plugin
+source in your Claude Code admin settings* — this is evolving and not
+something to take on faith from this doc.
 
 ## 6. Verify: does Basic-Auth via `_headers` need a paid Netlify plan?
 

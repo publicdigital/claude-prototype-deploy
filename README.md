@@ -10,7 +10,7 @@ experience.
 ```
 prototype-builder's Claude Code session
         │
-        │  runs the `new-prototype` skill (skill/new-prototype/SKILL.md)
+        │  runs the `new-prototype` skill (skills/new-prototype/SKILL.md)
         ▼
 new GitHub repo in `publicdigital`, seeded from prototype-template/
         │
@@ -45,7 +45,7 @@ automatic deletion (yet)
 | `.github/workflows/deploy-prototype.yml` | Reusable workflow every prototype repo calls to deploy to Netlify |
 | `.github/workflows/fleet-check.yml` | Daily audit of every prototype's switch-off date |
 | `prototype-template/` | Files copied into each new prototype repo by the `new-prototype` skill |
-| `skill/new-prototype/SKILL.md` | The Claude Code skill a prototype-builder invokes to scaffold + deploy |
+| `skills/new-prototype/SKILL.md` | The Claude Code skill a prototype-builder invokes to scaffold + deploy |
 | `scripts/check_expiry.py` | Stdlib-only helper used by `fleet-check.yml` to compute prototype status |
 | `docs/ADMIN-SETUP.md` | One-time manual setup for the org admin (start here if you're new) |
 | `docs/PROTOTYPE-CONSTRAINTS.md` | What does/doesn't work on this hosting, for builders and for Claude |

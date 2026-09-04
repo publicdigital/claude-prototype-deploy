@@ -1,0 +1,13 @@
+{
+  "name": "claude-prototype-deploy",
+  "owner": {
+    "name": "Public Digital"
+  },
+  "plugins": [
+    {
+      "name": "new-prototype",
+      "source": "./",
+      "description": "Scaffold and deploy publicdigital prototypes to a live, password-protected URL."
+    }
+  ]
+}
