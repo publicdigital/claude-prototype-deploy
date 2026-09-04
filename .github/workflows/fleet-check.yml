@@ -1,0 +1,166 @@
+name: Fleet check — prototype switch-off audit
+
+# Daily, org-wide audit. Finds every repo in `publicdigital` tagged with the
+# `claude-prototype` topic, reads each one's PROTOTYPE.yml, and posts a
+# single tracking issue (in THIS repo) summarizing switch-off status.
+#
+# This is reporting only — it never deletes, disables, or archives
+# anything. Auto-deleting an expired prototype is a deliberate future step
+# that needs the admin to explicitly test and approve it first.
+#
+# Requires an org-scoped read token because GITHUB_TOKEN is repo-scoped and
+# cannot search or read *other* repos in the org. See docs/ADMIN-SETUP.md
+# for how the admin should create and add secrets.ORG_READ_TOKEN.
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repo (for scripts/check_expiry.py)
+        uses: actions/checkout@v4
+
+      - name: Gather prototype status and upsert tracking issue
+        env:
+          ORG_READ_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          sys.path.insert(0, "scripts")
+          from check_expiry import build_report
+
+          ORG = "publicdigital"
+          TOPIC = "claude-prototype"
+          MARKER = "<!-- fleet-check-tracking-issue -->"
+
+          org_token = os.environ.get("ORG_READ_TOKEN", "")
+          gh_token = os.environ["GITHUB_TOKEN"]
+          this_repo = os.environ["GITHUB_REPOSITORY"]
+
+          if not org_token:
+              print(
+                  "ORG_READ_TOKEN secret is not set — see docs/ADMIN-SETUP.md. "
+                  "Cannot search across the org, stopping.",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          def api_get(url, token, accept="application/vnd.github+json"):
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": accept,
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+              )
+              with urllib.request.urlopen(req) as resp:
+                  return resp.read()
+
+          def api_write(url, token, payload, method="POST"):
+              req = urllib.request.Request(
+                  url,
+                  data=json.dumps(payload).encode("utf-8"),
+                  method=method,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+              )
+              with urllib.request.urlopen(req) as resp:
+                  return resp.read()
+
+          # 1. Find every repo in the org carrying the claude-prototype topic.
+          repos = []
+          page = 1
+          while True:
+              q = urllib.parse.quote(f"org:{ORG} topic:{TOPIC}")
+              url = f"https://api.github.com/search/repositories?q={q}&per_page=100&page={page}"
+              data = json.loads(api_get(url, org_token))
+              items = data.get("items", [])
+              repos.extend(item["full_name"] for item in items)
+              if len(items) < 100:
+                  break
+              page += 1
+
+          # 2. Fetch and parse each repo's PROTOTYPE.yml.
+          #    PROTOTYPE.yml is a flat key: value file (see prototype-template/
+          #    PROTOTYPE.yml) so a naive line parser avoids needing a YAML
+          #    dependency here. If the template ever grows nested structure
+          #    this parser will need to become a real YAML parse instead.
+          def parse_flat_yaml(text):
+              fields = {}
+              for line in text.splitlines():
+                  line = line.strip()
+                  if not line or line.startswith("#") or ":" not in line:
+                      continue
+                  key, _, value = line.partition(":")
+                  fields[key.strip()] = value.strip().strip('"').strip("'")
+              return fields
+
+          entries = []
+          for repo in repos:
+              entry = {"repo": repo}
+              try:
+                  # NOTE: application/vnd.github.raw is the documented media
+                  # type for raw file contents on the Contents API — verify
+                  # against current GitHub docs if this step starts failing.
+                  raw = api_get(
+                      f"https://api.github.com/repos/{repo}/contents/PROTOTYPE.yml",
+                      org_token,
+                      accept="application/vnd.github.raw",
+                  ).decode("utf-8")
+                  fields = parse_flat_yaml(raw)
+                  entry["switch_off_date"] = fields.get("switch_off_date", "")
+                  entry["owner_github"] = fields.get("owner_github", "")
+                  entry["client"] = fields.get("client", "")
+                  entry["project"] = fields.get("project", "")
+                  if not entry["switch_off_date"]:
+                      entry["error"] = "PROTOTYPE.yml missing switch_off_date"
+              except urllib.error.HTTPError as exc:
+                  entry["error"] = f"could not read PROTOTYPE.yml ({exc.code})"
+              entries.append(entry)
+
+          report = build_report(entries)
+          body = f"{MARKER}\n\n{report}\n"
+          title = "Prototype fleet status"
+
+          # 3. Upsert a single open tracking issue in this repo.
+          q = urllib.parse.quote(f'repo:{this_repo} in:body "{MARKER}" type:issue state:open')
+          search_url = f"https://api.github.com/search/issues?q={q}"
+          existing = json.loads(api_get(search_url, gh_token)).get("items", [])
+
+          if existing:
+              issue_number = existing[0]["number"]
+              api_write(
+                  f"https://api.github.com/repos/{this_repo}/issues/{issue_number}",
+                  gh_token,
+                  {"body": body},
+                  method="PATCH",
+              )
+              print(f"Updated tracking issue #{issue_number}")
+          else:
+              api_write(
+                  f"https://api.github.com/repos/{this_repo}/issues",
+                  gh_token,
+                  {"title": title, "body": body},
+              )
+              print("Created new tracking issue")
+          PY
