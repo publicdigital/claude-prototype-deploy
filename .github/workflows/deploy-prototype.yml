@@ -65,7 +65,15 @@ jobs:
           # First deploy for this repo: no site exists yet. `sites:create`
           # creates it and links it to the current directory (writing
           # .netlify/state.json), which the deploy below then picks up.
-          netlify sites:create --name "${GITHUB_REPOSITORY##*/}"
+          #
+          # `sites:create` needs an explicit --account-slug: without it, it
+          # prompts interactively to choose a team whenever the token's
+          # account belongs to more than a personal account (ours does —
+          # "Public Digital" — see docs/ADMIN-SETUP.md step 1), which hangs
+          # forever in CI. Look the slug up via the API instead of hardcoding
+          # it, since it assumes a single team on the account either way.
+          ACCOUNT_SLUG=$(netlify api listAccountsForUser | jq -r '.[0].slug')
+          netlify sites:create --name "${GITHUB_REPOSITORY##*/}" --account-slug "$ACCOUNT_SLUG"
           netlify deploy --prod --dir=.
 
       - name: Commit Netlify site state (first run only)
