@@ -73,7 +73,13 @@ jobs:
           # forever in CI. Look the slug up via the API instead of hardcoding
           # it, since it assumes a single team on the account either way.
           ACCOUNT_SLUG=$(netlify api listAccountsForUser | jq -r '.[0].slug')
-          netlify sites:create --name "${GITHUB_REPOSITORY##*/}" --account-slug "$ACCOUNT_SLUG"
+          # Site names share Netlify's global *.netlify.app namespace across
+          # every account, not just this org's — a bare repo name collides
+          # easily (hit in practice: "skill-test" was already taken). Prefix
+          # with the org name to make collisions unlikely; a real collision
+          # would otherwise re-prompt interactively and hang CI the same way
+          # the missing --account-slug did above.
+          netlify sites:create --name "publicdigital-${GITHUB_REPOSITORY##*/}" --account-slug "$ACCOUNT_SLUG"
           netlify deploy --prod --dir=.
 
       - name: Commit Netlify site state (first run only)
