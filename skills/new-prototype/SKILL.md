@@ -165,8 +165,9 @@ roughly in the order you're likely to hit them:
 - `NETLIFY_AUTH_TOKEN` not yet available to this repo — check whether
   Step 3's secrets-bridge dispatch actually succeeded before the push.
   If the dispatch itself failed with a 404 fetching the repo's secrets
-  public key, that's `ORG_SECRETS_BRIDGE_TOKEN` not covering this repo —
-  an admin setup issue, see `docs/ADMIN-SETUP.md` step 3.
+  public key, that's the secrets-bridge GitHub App not being installed on
+  this repo (or not installed on "All repositories") — an admin setup
+  issue, see `docs/ADMIN-SETUP.md` step 3.
 - The reusable workflow call fails to parse at all (zero jobs run, no
   logs) — a YAML/syntax problem in `deploy-prototype.yml` itself on
   `main`, not something to work around in the prototype repo; report it
