@@ -45,35 +45,52 @@ at creation time. Nobody has to touch this per prototype — the
    they'll get their own copy of the token as a repo secret via the bridge
    workflow, not via this org secret.)
 
-## 3. Create the secrets bridge token (`ORG_SECRETS_BRIDGE_TOKEN`)
+## 3. Create a GitHub App for the secrets bridge (`SECRETS_BRIDGE_APP_ID` / `SECRETS_BRIDGE_APP_PRIVATE_KEY`)
 
 The bridge workflow needs a credential that can write Actions secrets into
 *other* repos in the org — `GITHUB_TOKEN` inside a workflow run cannot do
 this, it's scoped to the repo the workflow runs in.
 
-1. Create a **fine-grained personal access token** (or an organization-owned
-   GitHub App installation token, if you'd rather not tie this to a
-   personal account — *verify current best practice in GitHub's docs, this
-   area has evolved*) with:
-   - **Secrets: write** access, and **Metadata: read** access, for all repos
-     in the org (or at minimum, all repos carrying the `claude-prototype`
-     topic — but note fine-grained PATs scope by explicit repo selection or
-     "all repos," not by topic, same caveat as the old approach to step 2
-     above). **Scope this to "All repositories," not an explicit list** —
-     a new prototype repo obviously can't be on an explicit list yet when
-     it's created, and the bridge dispatches against it immediately. Get
-     this wrong and the symptom is specific: the bridge workflow run fails
-     with `failed to fetch public key: HTTP 404: Not Found
-     (.../repos/publicdigital/<repo>/actions/secrets/public-key)` — that
-     404 (not 403) is exactly what a fine-grained PAT returns for a repo
-     outside its scope, and is easy to misread as some other kind of
-     permissions problem.
-2. In GitHub: `publicdigital` org → **Settings → Secrets and variables →
-   Actions → New organization secret**.
-3. Name it exactly `ORG_SECRETS_BRIDGE_TOKEN`, scope it to
-   **Selected repositories** → just `claude-prototype-deploy` — it never
-   needs to be visible to prototype repos, or to `claude-prototype-fleet-check`
-   (see step 4 below, which uses a separate token scoped to that repo instead).
+Use a GitHub App owned by the org rather than a personal fine-grained PAT:
+its installation tokens are minted on demand inside the workflow itself
+(via `actions/create-github-app-token`) and are short-lived (1 hour), so
+there's no personal account tying it down and no yearly expiry to track
+and renew by hand.
+
+1. In GitHub: `publicdigital` org → **Settings → Developer settings →
+   GitHub Apps → New GitHub App**. *(Verify this exact path — GitHub's
+   settings layout changes periodically.)*
+2. Give it any name (e.g. `publicdigital-secrets-bridge`) and any Homepage
+   URL (e.g. this repo's URL). Leave **Webhook → Active** unchecked — this
+   app never receives webhook events.
+3. Under **Repository permissions**, set **Secrets: Read and write** (this
+   auto-selects **Metadata: Read-only**, which every app needs).
+4. Under **Where can this GitHub App be installed?**, choose **Only on
+   this account**.
+5. Click **Create GitHub App**. Note the **App ID** shown on its page,
+   then scroll to **Private keys → Generate a private key** — this
+   downloads a `.pem` file. Copy its contents now; GitHub won't show them
+   again (you can always generate a fresh key later if you lose it).
+6. Click **Install App** (left sidebar), select `publicdigital`, and
+   choose **All repositories** — not an explicit list. **This matters**:
+   a new prototype repo obviously can't be on an explicit list yet when
+   it's created, and the bridge dispatches against it immediately. Get
+   this wrong and the symptom is specific: the bridge workflow run fails
+   with `failed to fetch public key: HTTP 404: Not Found
+   (.../repos/publicdigital/<repo>/actions/secrets/public-key)` — that
+   404 (not 403) is exactly what an installation token returns for a repo
+   outside its access, and is easy to misread as some other kind of
+   permissions problem.
+7. In GitHub: `claude-prototype-deploy` (this repo) → **Settings →
+   Secrets and variables → Actions → New repository secret**. Add two
+   plain repository secrets:
+   - `SECRETS_BRIDGE_APP_ID` — the App ID from step 5.
+   - `SECRETS_BRIDGE_APP_PRIVATE_KEY` — the full `.pem` file contents from
+     step 5.
+
+   These don't need the org-secret bridging step 2 used to require —
+   only this repo's own workflow (`provision-prototype-secret.yml`) ever
+   reads them, so a plain repository secret is enough.
 
 Anyone using the `new-prototype` skill also needs permission to trigger
 `workflow_dispatch` on `claude-prototype-deploy` itself (GitHub requires at
@@ -85,7 +102,7 @@ this repo instead of the individual user's own token — *decide based on
 how much you trust members to have write access to the deploy tooling repo
 itself.*
 
-## 4. Generate an org-read GitHub token for the fleet audit
+## 4. Create a GitHub App for the fleet audit (`FLEET_READ_APP_ID` / `FLEET_READ_APP_PRIVATE_KEY`)
 
 The daily `fleet-check.yml` workflow needs to search and read files across
 *every* repo in the org, which the default per-repo `GITHUB_TOKEN` cannot
@@ -95,18 +112,32 @@ do. This workflow lives in a separate **private** repo,
 prototype repo names, owners, and switch-off dates, which shouldn't be
 public.
 
-1. Create a **fine-grained personal access token** (or an organization-owned
-   GitHub App token, if you'd rather not tie this to a personal account —
-   *verify current best practice for org-wide read tokens in GitHub's docs,
-   this area has evolved*) with:
-   - Read-only access to **Contents** and **Metadata** for all repos in the
-     org (or at minimum, all repos carrying the `claude-prototype` topic).
-2. In GitHub: `publicdigital` org → **Settings → Secrets and variables →
-   Actions → New organization secret**.
-3. Name it exactly `ORG_READ_TOKEN`, scope it to the
-   `claude-prototype-fleet-check` repo only — it doesn't need to be visible
-   to this repo or to prototype repos themselves.
-4. Also restrict who has collaborator access to `claude-prototype-fleet-check`
+As with the secrets bridge in step 3, use a GitHub App rather than a
+personal fine-grained PAT — and make it a **separate** app from the
+secrets-bridge one, so that this read-only credential can never write
+secrets anywhere, and the secrets-bridge credential never leaves this repo.
+
+1. In GitHub: `publicdigital` org → **Settings → Developer settings →
+   GitHub Apps → New GitHub App**.
+2. Give it any name (e.g. `publicdigital-fleet-audit`) and any Homepage
+   URL. Leave **Webhook → Active** unchecked.
+3. Under **Repository permissions**, set **Contents: Read-only** (this
+   auto-selects **Metadata: Read-only**).
+4. Under **Where can this GitHub App be installed?**, choose **Only on
+   this account**.
+5. Click **Create GitHub App**, note the **App ID**, then **Private keys
+   → Generate a private key** and copy the downloaded `.pem` file's
+   contents now — GitHub won't show them again.
+6. Click **Install App**, select `publicdigital`, and choose **All
+   repositories** — the audit needs to see every prototype repo the moment
+   it's tagged `claude-prototype`, including ones created after this app
+   was installed.
+7. In GitHub: `claude-prototype-fleet-check` repo → **Settings → Secrets
+   and variables → Actions → New repository secret**. Add:
+   - `FLEET_READ_APP_ID` — the App ID from step 5.
+   - `FLEET_READ_APP_PRIVATE_KEY` — the full `.pem` file contents from
+     step 5.
+8. Also restrict who has collaborator access to `claude-prototype-fleet-check`
    itself — its issues carry the same client-identifying metadata, so treat
    repo access there like access to a client list.
 
