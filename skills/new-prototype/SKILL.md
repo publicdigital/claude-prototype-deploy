@@ -26,15 +26,25 @@ you need it; you don't need to load it up front.
 
 ## Step 1 — Check whether this user can actually create the repo
 
-Before asking the user anything else, confirm you (acting as this user)
-can create a repository in the `publicdigital` GitHub org.
+Before asking the user anything else, find out whether you can actually
+create a repository in the `publicdigital` GitHub org from this session.
+There are two distinct ways this can fail — tell them apart, since they
+need different fixes:
 
-- Try to determine this via the GitHub API/tooling available to you (e.g.
-  checking the authenticated user's org role/permissions, or attempting a
-  dry-run check if your GitHub tooling supports one).
-- If you cannot create org repos (org repo-creation is restricted — see
-  `docs/ADMIN-SETUP.md` step 5 in `claude-prototype-deploy`), **stop here**
-  and tell the user exactly this:
+- Try the repo-creation call (or a dry run, if your tooling has one).
+- If it fails with **`Resource not accessible by integration`** (or any
+  error naming the GitHub App/integration rather than the user's own
+  permissions): this is a **Claude Code on the web / cloud session
+  limitation, not an org policy**. Cloud sessions' GitHub access is scoped
+  to the repos explicitly attached to the session, and a brand-new repo
+  can't be in that set yet — no org setting changes this (see
+  `docs/ADMIN-SETUP.md` step 5 in `claude-prototype-deploy` for why).
+  Don't tell the user to check org Member privileges, that's not the
+  cause here — skip straight to the pre-created-repo path below.
+- If it instead fails with an ordinary permissions/403 tied to the user
+  themselves (not the integration), org repo-creation is actually
+  restricted — see `docs/ADMIN-SETUP.md` step 5. **Stop here** and tell
+  the user exactly this:
   > "I can't create a new repository in the `publicdigital` org — repo
   > creation looks like it's restricted to admins. Ask your admin to
   > either turn on member repo creation (GitHub org Settings → Member
@@ -44,8 +54,8 @@ can create a repository in the `publicdigital` GitHub org.
   > repo for the exact steps to send them."
   Do not proceed past this point until the user has either fixed the
   permission or given you a pre-created repo name to use.
-- If a pre-created empty repo name is given instead, use that repo in
-  place of creating a new one in step 3, but still do everything else
+- Either way, once you have a pre-created empty repo name, use that repo
+  in place of creating a new one in step 3, but still do everything else
   (topic, description, template files, commit, push).
 
 ## Step 2 — Gather and validate prototype details

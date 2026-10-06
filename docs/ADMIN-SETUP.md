@@ -157,6 +157,21 @@ depends on an org setting:
      every new prototype — pre-create an empty repo and tell the skill to
      use it.
 
+**Claude Code on the web / cloud sessions are a separate case this
+setting can't fix.** Even with member repo-creation **On**, a cloud
+session's GitHub access is scoped only to the repos explicitly attached
+to that session — it can't create a brand-new repo no matter what this
+org setting says, and fails with `Resource not accessible by integration`
+(a GitHub App permission/scope error, not a user-permissions one). This
+isn't fixable from this setting, and it's unrelated to the two GitHub
+Apps from steps 3–4 above (those authenticate the deploy/audit
+*workflows*, not the interactive session itself). If a builder hits this
+running the skill from Claude Code on the web, the dependable route is
+the pre-created-repo path the skill's Step 1 already supports: pre-create
+an empty repo yourself (or have the builder do it from a context with
+full GitHub access — a local Claude Code session, or the GitHub UI
+directly) and hand its name to the skill.
+
 ## 6. Enable the `new-prototype` skill for your org's Claude Code users
 
 This repo is itself a Claude Code plugin marketplace (see
